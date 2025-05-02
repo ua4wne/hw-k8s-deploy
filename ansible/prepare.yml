@@ -1,0 +1,38 @@
+---
+- name: Prepare k8s
+  hosts: cluster_srv
+  become_method: ansible.builtin.sudo
+  tasks:
+    - name: Update apt repo and cache on all Debian/Ubuntu boxes
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        force_apt_get: true
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages on servers
+      become: true
+      ansible.builtin.apt:
+        upgrade: dist
+        force_apt_get: true
+- name: Prepare kubespray
+  hosts: k8s_master
+  become_method: ansible.builtin.sudo
+  tasks:
+    - name: Install required system packages
+      become: true
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: true
+      vars:
+        packages:
+          - git
+          - python3
+          - python3-pip
+          - python3.12-venv
+          - python3.8-venv
+    - name: Clone a repo with separate git directory
+      ansible.builtin.git:
+        repo: 'https://github.com/kubernetes-incubator/kubespray.git'
+        version: release-2.26

@@ -1,0 +1,81 @@
+---
+- name: Prepare k8s
+  hosts: cluster_srv
+  become_method: ansible.builtin.sudo
+  tasks:
+    - name: Update apt repo and cache on all Debian/Ubuntu boxes
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        force_apt_get: true
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages on servers
+      become: true
+      ansible.builtin.apt:
+        upgrade: dist
+        force_apt_get: true
+    - name: Install required system packages
+      become: true
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: true
+      vars:
+        packages:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg2
+          - software-properties-common
+    - name: Add network modules
+      become: true
+      ansible.builtin.shell: 'cat <<EOF | tee /etc/modules-load.d/k8s.conf
+                              overlay
+                              br_netfilter
+                              EOF'
+      changed_when: false
+    - name: Add modprobe
+      become: true
+      ansible.builtin.shell: 'modprobe overlay'
+      changed_when: false
+    - name: Add modprobe br_netfilter
+      become: true
+      ansible.builtin.shell: 'modprobe br_netfilter'
+      changed_when: false
+    - name: Add network modules
+      become: true
+      ansible.builtin.shell: 'cat <<EOF | tee /etc/sysctl.d/k8s.conf
+                              net.bridge.bridge-nf-call-iptables  = 1
+                              net.bridge.bridge-nf-call-ip6tables = 1
+                              net.ipv4.ip_forward                 = 1
+                              EOF'
+      changed_when: false
+    - name: reload core
+      become: true
+      ansible.builtin.shell: 'sysctl --system'
+      changed_when: false
+    - name: disable ufw
+      become: true
+      ansible.builtin.shell: 'systemctl stop ufw && systemctl disable ufw'
+      changed_when: false
+    - name: Add k8s gpg
+      become: true
+      ansible.builtin.shell: 'curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg'
+      changed_when: false
+    - name: Add k8s repo
+      become: true
+      ansible.builtin.shell: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ / | tee /etc/apt/sources.list.d/kubernetes.list'
+      changed_when: false
+    - name: Install required k8s packages
+      become: true
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: true
+      vars:
+        packages:
+          - kubelet
+          - kubeadm
+          - kubectl
+          - containerd
