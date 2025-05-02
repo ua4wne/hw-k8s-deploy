@@ -31,8 +31,8 @@
           - python3
           - python3-pip
           - python3.12-venv
-          - python3.8-venv
     - name: Clone a repo with separate git directory
       ansible.builtin.git:
         repo: 'https://github.com/kubernetes-incubator/kubespray.git'
+        dest: /tmp/kubespray
         version: release-2.26

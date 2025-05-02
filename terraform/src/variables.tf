@@ -61,7 +61,7 @@ variable "vm_web_platform" {
 
 variable "vm_web_family" {
   type        = string
-  default     = "ubuntu-2204-lts-oslogin"
+  default     = "ubuntu-2404-lts-oslogin"
   description = "yandex_compute_image"
 }
 
